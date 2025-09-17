@@ -204,7 +204,7 @@ src/main/java/com/firefly/ragdemo/
 
 ## 许可证
 
-MIT License
+GPL v3
 
 ## 环境变量
 
