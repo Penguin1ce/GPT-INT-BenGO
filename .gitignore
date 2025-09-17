@@ -43,3 +43,5 @@ build/
 Thumbnail.db
 
 application-dev.yaml
+
+/uploads/

@@ -214,20 +214,65 @@ MIT License
 - `OPENAI_BASE_URL`：OpenAI Base URL（可选，默认 https://api.csun.site）
 - `APP_JWT_SECRET`：JWT签名密钥（建议设置为强随机串）
 
-常见用法：
+# TODO 列表
 
-```bash
-# Windows PowerShell
-$env:OPENAI_API_KEY="sk-xxxx"; $env:OPENAI_BASE_URL="https://api.openai.com"; $env:APP_JWT_SECRET="your-strong-secret"; mvn spring-boot:run
+## RAG 功能实现
+- [ ] 文档入库流程设计
+  - [ ] 文件解析器：txt、md、pdf、docx
+  - [ ] 元数据抽取（文件名、大小、MIME、作者、时间等）
+  - [ ] 入库状态机：PENDING -> PROCESSING -> COMPLETED/FAILED
+- [ ] 文本切分（Chunking）
+  - [ ] 规则：按段落/标点/长度（如 500-1000 tokens）
+  - [ ] 语言/格式感知：Markdown/代码块保留
+- [ ] 向量化（Embeddings）
+  - [ ] 集成 OpenAI/可替代模型
+  - [ ] 批量向量化与重试/限速
+- [ ] 向量库（Vector Store）
+  - [ ] 选择 pgvector（或替代方案）
+  - [ ] 数据表/索引设计（文档、块、向量、元数据）
+  - [ ] 迁移脚本与本地docker支持
+- [ ] 检索（Retrieval）
+  - [ ] Top-k 召回（按相似度阈值）
+  - [ ] 过滤器：按用户/文档/标签
+  - [ ] （可选）重排/多路召回
+- [ ] 生成（Generation）
+  - [ ] 上下文注入（含去重/截断）
+  - ✅ 系统提示词：重庆大学大数据与软件学院 C++ 助教
+  - ✅ 输出结构化响应（含使用统计）
+- [ ] 流式输出与来源引用
+  - ✅ SSE 流式增量输出
+  - [ ] 返回引用片段与来源文档信息
 
-# Linux / macOS
-OPENAI_API_KEY=sk-xxxx OPENAI_BASE_URL=https://api.openai.com APP_JWT_SECRET=your-strong-secret mvn spring-boot:run
-```
+## 文件管理
+- ✅ 文件上传 API
+  - ✅ 大小/类型校验（10MB，白名单）
+  - ✅ 存储路径与命名策略（去重/分片可选）
+  - [ ] 触发解析->切分->向量化->入库异步任务
+- [ ] 文件删除 API
+  - [ ] 权限校验（仅文件所有者）
+  - [ ] 级联清理：块与向量、元数据
+  - [ ] 幂等与审计日志
 
-也可在本地创建`.env`文件（已被.gitignore忽略），并参考`.env.example`：
+## 知识库管理
+- [ ] 按文档删除
+  - [ ] 软删/硬删策略
+  - [ ] 清理对应的向量与元数据
+- [ ] 知识库删除（按空间/用户范围）
+  - [ ] 批量删除任务与进度回传
+  - [ ] 资源回收与配额统计
 
-```env
-OPENAI_API_KEY=sk-xxxx
-OPENAI_BASE_URL=https://api.openai.com
-APP_JWT_SECRET=your-strong-secret
-```
+## 基础设施与运维
+- [ ] 异步任务处理（解析/嵌入/入库）
+  - [ ] 队列/线程池与失败重试
+  - [ ] 任务状态查询接口
+- ✅ 配置与密钥管理
+  - ✅ 使用环境变量（不提交密钥）
+  - ✅ README 增补运行说明
+- [ ] 监控与可观测性（可选）
+  - [ ] 健康检查/指标/日志字段化
+
+## 验收标准（摘选）
+- [ ] 上传文档后，可在向量库检索到对应上下文
+- [ ] 聊天时基于检索结果进行答案生成并可流式返回
+- [ ] 可删除指定文档与对应向量
+- [ ] 可删除知识库并清理全部关联数据 

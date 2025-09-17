@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.firefly.ragdemo.mapper.UserMapper">
+
+    <resultMap id="UserResult" type="com.firefly.ragdemo.entity.User">
+        <id property="id" column="id" />
+        <result property="username" column="username" />
+        <result property="email" column="email" />
+        <result property="passwordHash" column="password_hash" />
+        <result property="createdAt" column="created_at" />
+        <result property="updatedAt" column="updated_at" />
+        <result property="isActive" column="is_active" />
+        <result property="lastLogin" column="last_login" />
+    </resultMap>
+
+    <select id="findById" resultMap="UserResult">
+        SELECT * FROM users WHERE id = #{id}
+    </select>
+
+    <select id="findByUsername" resultMap="UserResult">
+        SELECT * FROM users WHERE username = #{username}
+    </select>
+
+    <select id="findByEmail" resultMap="UserResult">
+        SELECT * FROM users WHERE email = #{email}
+    </select>
+
+    <select id="existsByUsername" resultType="boolean">
+        SELECT CASE WHEN COUNT(1) > 0 THEN TRUE ELSE FALSE END
+        FROM users WHERE username = #{username}
+    </select>
+
+    <select id="existsByEmail" resultType="boolean">
+        SELECT CASE WHEN COUNT(1) > 0 THEN TRUE ELSE FALSE END
+        FROM users WHERE email = #{email}
+    </select>
+
+    <insert id="insert" parameterType="com.firefly.ragdemo.entity.User">
+        INSERT INTO users (
+            id, username, email, password_hash, created_at, updated_at, is_active, last_login
+        ) VALUES (
+            #{id}, #{username}, #{email}, #{passwordHash}, #{createdAt}, #{updatedAt}, #{isActive}, #{lastLogin}
+        )
+    </insert>
+
+    <update id="updateLastLogin">
+        UPDATE users SET last_login = #{lastLogin}, updated_at = CURRENT_TIMESTAMP WHERE id = #{userId}
+    </update>
+</mapper> 

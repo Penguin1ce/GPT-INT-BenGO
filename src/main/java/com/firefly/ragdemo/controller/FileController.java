@@ -2,13 +2,12 @@ package com.firefly.ragdemo.controller;
 
 import com.firefly.ragdemo.VO.ApiResponse;
 import com.firefly.ragdemo.VO.FileVO;
-import com.firefly.ragdemo.VO.PaginationVO;
 import com.firefly.ragdemo.entity.User;
 import com.firefly.ragdemo.secutiry.CustomUserPrincipal;
 import com.firefly.ragdemo.service.FileService;
+import com.firefly.ragdemo.util.PageResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -61,10 +60,15 @@ public class FileController {
 
         try {
             String userId = principal.getUserId();
-            Page<FileVO> filesPage = fileService.getUserFiles(userId, page, limit);
+            PageResult<FileVO> pageResult = fileService.getUserFiles(userId, page, limit);
 
-            List<FileVO> files = filesPage.getContent();
-            PaginationVO pagination = fileService.createPagination(filesPage);
+            List<FileVO> files = pageResult.getItems();
+
+            Map<String, Object> pagination = new HashMap<>();
+            pagination.put("page", pageResult.getPage());
+            pagination.put("limit", pageResult.getLimit());
+            pagination.put("total", pageResult.getTotal());
+            pagination.put("totalPages", pageResult.getTotalPages());
 
             Map<String, Object> data = new HashMap<>();
             data.put("files", files);

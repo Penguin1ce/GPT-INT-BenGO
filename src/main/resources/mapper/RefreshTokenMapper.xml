@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.firefly.ragdemo.mapper.RefreshTokenMapper">
+
+    <resultMap id="RefreshTokenResult" type="com.firefly.ragdemo.entity.RefreshToken">
+        <id property="id" column="id" />
+        <result property="userId" column="user_id" />
+        <result property="token" column="token" />
+        <result property="expiresAt" column="expires_at" />
+        <result property="createdAt" column="created_at" />
+        <result property="isRevoked" column="is_revoked" />
+    </resultMap>
+
+    <select id="findByToken" resultMap="RefreshTokenResult">
+        SELECT * FROM refresh_tokens WHERE token = #{token}
+    </select>
+
+    <select id="findValidToken" resultMap="RefreshTokenResult">
+        SELECT * FROM refresh_tokens
+        WHERE token = #{token}
+          AND is_revoked = FALSE
+          AND expires_at > #{now}
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.firefly.ragdemo.entity.RefreshToken">
+        INSERT INTO refresh_tokens (
+            id, user_id, token, expires_at, created_at, is_revoked
+        ) VALUES (
+            #{id}, #{userId}, #{token}, #{expiresAt}, #{createdAt}, #{isRevoked}
+        )
+    </insert>
+
+    <update id="revokeAllTokensByUserId">
+        UPDATE refresh_tokens SET is_revoked = TRUE WHERE user_id = #{userId}
+    </update>
+
+    <update id="revokeToken">
+        UPDATE refresh_tokens SET is_revoked = TRUE WHERE token = #{token}
+    </update>
+
+    <delete id="deleteExpiredTokens">
+        DELETE FROM refresh_tokens WHERE expires_at &lt; #{now}
+    </delete>
+</mapper> 
