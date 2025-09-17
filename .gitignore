@@ -31,3 +31,15 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Local env files
+.env
+.env.local
+.env.*.local
+.env.properties
+
+# OS/Editor caches
+.DS_Store
+Thumbnail.db
+
+application-dev.yaml
