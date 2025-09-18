@@ -4,7 +4,9 @@ import com.firefly.ragdemo.VO.FileVO;
 import com.firefly.ragdemo.entity.UploadedFile;
 import com.firefly.ragdemo.entity.User;
 import com.firefly.ragdemo.mapper.UploadedFileMapper;
+import com.firefly.ragdemo.mapper.DocumentChunkMapper;
 import com.firefly.ragdemo.service.FileService;
+import com.firefly.ragdemo.service.RagIndexService;
 import com.firefly.ragdemo.util.PageResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +29,8 @@ import java.util.*;
 public class FileServiceImpl implements FileService {
 
     private final UploadedFileMapper uploadedFileMapper;
+    private final RagIndexService ragIndexService;
+    private final DocumentChunkMapper documentChunkMapper;
 
     @Value("${app.file.upload-dir:uploads}")
     private String uploadDir;
@@ -64,7 +68,7 @@ public class FileServiceImpl implements FileService {
 
         uploadedFileMapper.insert(uploadedFile);
 
-        processFileAsync(uploadedFile.getId());
+        processFileAfterCommit(uploadedFile.getId());
 
         return FileVO.builder()
                 .id(uploadedFile.getId())
@@ -114,6 +118,27 @@ public class FileServiceImpl implements FileService {
         return uploadedFileMapper.findById(fileId);
     }
 
+    @Override
+    @Transactional
+    public void deleteUserFile(String userId, String fileId) {
+        Optional<UploadedFile> fileOpt = uploadedFileMapper.findById(fileId);
+        if (fileOpt.isEmpty()) {
+            return;
+        }
+        UploadedFile file = fileOpt.get();
+        if (!Objects.equals(file.getUserId(), userId)) {
+            throw new IllegalArgumentException("无权删除他人文件");
+        }
+        documentChunkMapper.deleteByFileIdAndUser(fileId, userId);
+        // 删除磁盘文件（忽略失败）
+        try {
+            Path p = Paths.get(file.getFilePath());
+            Files.deleteIfExists(p);
+        } catch (Exception ignored) { }
+        // 删除uploaded_files记录
+        uploadedFileMapper.deleteById(fileId);
+    }
+
     private void validateFile(MultipartFile file) {
         if (file.isEmpty()) {
             throw new IllegalArgumentException("文件不能为空");
@@ -142,24 +167,30 @@ public class FileServiceImpl implements FileService {
         return "";
     }
 
-    private void processFileAsync(String fileId) {
+    private void processFileAfterCommit(String fileId) {
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            startIndexThread(fileId);
+                        }
+                    }
+            );
+        } else {
+            startIndexThread(fileId);
+        }
+    }
+
+    private void startIndexThread(String fileId) {
         new Thread(() -> {
             try {
-                Thread.sleep(2000);
-                Optional<UploadedFile> fileOpt = uploadedFileMapper.findById(fileId);
-                if (fileOpt.isPresent()) {
-                    UploadedFile file = fileOpt.get();
-                    uploadedFileMapper.updateStatus(file.getId(), UploadedFile.FileStatus.COMPLETED.name());
-                    log.info("文件处理完成: {}", fileId);
-                }
+                log.info("开始索引文件: {}", fileId);
+                ragIndexService.indexFile(fileId);
+                log.info("文件索引完成: {}", fileId);
             } catch (Exception e) {
                 log.error("文件处理失败: {}", fileId, e);
-                Optional<UploadedFile> fileOpt = uploadedFileMapper.findById(fileId);
-                if (fileOpt.isPresent()) {
-                    UploadedFile file = fileOpt.get();
-                    uploadedFileMapper.updateStatus(file.getId(), UploadedFile.FileStatus.FAILED.name());
-                }
             }
-        }).start();
+        }, "rag-index-" + fileId).start();
     }
 } 

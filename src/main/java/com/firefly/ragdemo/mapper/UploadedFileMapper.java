@@ -23,4 +23,6 @@ public interface UploadedFileMapper {
     int updateStatus(@Param("id") String id, @Param("status") String status);
 
     int update(UploadedFile file);
+
+    int deleteById(@Param("id") String id);
 } 

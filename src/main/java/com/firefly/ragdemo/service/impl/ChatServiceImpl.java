@@ -3,6 +3,7 @@ package com.firefly.ragdemo.service.impl;
 import com.firefly.ragdemo.DTO.ChatRequest;
 import com.firefly.ragdemo.VO.ChatResponseVO;
 import com.firefly.ragdemo.service.ChatService;
+import com.firefly.ragdemo.service.RagRetrievalService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.openai.OpenAiChatModel;
@@ -17,11 +18,12 @@ import java.util.List;
 public class ChatServiceImpl implements ChatService {
 
     private final OpenAiChatModel chatModel;
+    private final RagRetrievalService ragRetrievalService;
 
     @Override
     public ChatResponseVO chat(ChatRequest request, String userId) {
         try {
-            String finalPrompt = buildSystemPrompt(request) + "\n\n" + buildConversationPrompt(request.getMessages());
+            String finalPrompt = buildSystemPrompt(request) + "\n\n" + buildRagContext(request, userId) + "\n\n" + buildConversationPrompt(request.getMessages());
 
             var response = chatModel.call(finalPrompt);
             String content = response;
@@ -46,7 +48,7 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public Flux<String> chatStream(ChatRequest request, String userId) {
         try {
-            String finalPrompt = buildSystemPrompt(request) + "\n\n" + buildConversationPrompt(request.getMessages());
+            String finalPrompt = buildSystemPrompt(request) + "\n\n" + buildRagContext(request, userId) + "\n\n" + buildConversationPrompt(request.getMessages());
             return chatModel.stream(finalPrompt)
                     .map(chunk -> chunk != null ? chunk : "")
                     .filter(content -> !content.isEmpty());
@@ -81,11 +83,37 @@ public class ChatServiceImpl implements ChatService {
                 + "\n- 交互方式：若问题含糊，请用 1-2 句澄清提问再继续。";
     }
 
+    private String buildRagContext(ChatRequest request, String userId) {
+        try {
+            // 取用户最后一条消息作为查询意图
+            List<ChatRequest.ChatMessage> messages = request.getMessages();
+            if (messages == null || messages.isEmpty()) return "";
+            String lastUser = null;
+            for (int i = messages.size() - 1; i >= 0; i--) {
+                if ("user".equalsIgnoreCase(messages.get(i).getRole())) {
+                    lastUser = messages.get(i).getContent();
+                    break;
+                }
+            }
+            if (lastUser == null || lastUser.isBlank()) return "";
+            List<String> contexts = ragRetrievalService.retrieveContext(userId, lastUser, 5, 50);
+            if (contexts.isEmpty()) return "";
+            StringBuilder sb = new StringBuilder();
+            sb.append("[知识库检索结果，仅作参考，请结合对话与题意作答]\n");
+            for (int i = 0; i < contexts.size(); i++) {
+                sb.append("# 片段").append(i + 1).append("\n").append(contexts.get(i)).append("\n\n");
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            log.warn("RAG上下文构建失败，退化为普通对话: {}", e.getMessage());
+            return "";
+        }
+    }
+
     private String buildConversationPrompt(List<ChatRequest.ChatMessage> messages) {
         if (messages == null || messages.isEmpty()) {
             return "";
         }
-        // 仅取最近 20 条避免提示词过长
         int fromIndex = Math.max(0, messages.size() - 20);
         StringBuilder sb = new StringBuilder();
         sb.append("对话历史（按时间顺序）：\n");

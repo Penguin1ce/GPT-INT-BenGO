@@ -51,4 +51,8 @@
             status = #{status}
         WHERE id = #{id}
     </update>
+
+    <delete id="deleteById">
+        DELETE FROM uploaded_files WHERE id = #{id}
+    </delete>
 </mapper> 

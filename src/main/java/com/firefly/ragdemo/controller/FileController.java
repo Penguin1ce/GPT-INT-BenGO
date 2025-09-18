@@ -83,4 +83,18 @@ public class FileController {
                     .body(ApiResponse.error("获取文件列表失败"));
         }
     }
+
+    @DeleteMapping("/files/{fileId}")
+    public ResponseEntity<ApiResponse<Void>> deleteFile(@PathVariable String fileId,
+                                                        @AuthenticationPrincipal CustomUserPrincipal principal) {
+        try {
+            fileService.deleteUserFile(principal.getUserId(), fileId);
+            return ResponseEntity.ok(ApiResponse.success("删除成功", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(403).body(ApiResponse.error(e.getMessage(), 403));
+        } catch (Exception e) {
+            log.error("删除文件失败 for user {}: {}", principal.getUserId(), e.getMessage(), e);
+            return ResponseEntity.status(500).body(ApiResponse.error("删除文件失败"));
+        }
+    }
 }

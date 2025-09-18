@@ -52,6 +52,9 @@ spring:
         options:
           model: gpt-4o
           temperature: 0.7
+      embedding:
+        options:
+          model: text-embedding-3-small
   
   # 文件上传配置
   servlet:
@@ -75,6 +78,7 @@ logging:
   level:
     com.firefly.ragdemo: DEBUG
     org.springframework.security: DEBUG
+    org.springframework.ai: DEBUG
   pattern:
     console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
 

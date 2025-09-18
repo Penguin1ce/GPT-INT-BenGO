@@ -16,4 +16,6 @@ public interface FileService {
     PageResult<FileVO> getUserFiles(String userId, int page, int limit);
 
     Optional<UploadedFile> findById(String fileId);
+
+    void deleteUserFile(String userId, String fileId);
 }
